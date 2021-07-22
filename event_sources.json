@@ -1,0 +1,9 @@
+{
+  "ScheduleEvents": [
+    {
+      "ScheduleName": "node-lambda-bitbucket-to-slack-schedule",
+      "ScheduleState": "ENABLED",
+      "ScheduleExpression": "cron(0/3 23-12 ? * MON-SUN *)"
+    }
+  ]
+}
