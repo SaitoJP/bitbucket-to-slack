@@ -122,7 +122,7 @@ const parseData = async (data) => {
         // 返信対象のコメント記入者にメンションを飛ばす
         if (values.parent) {
           const displayName = await getCommentUserName(values.parent.links.self.href);
-          replies = `*Reply to:* ${mentions[displayName]}`;
+          replies = mentions[displayName];
         }
 
         break;
@@ -153,6 +153,9 @@ const filterViewdData = (viewedDate, data) => {
   });
 }
 
+const truncate = (str, len) => {
+  return str.length <= len ? str: (str.substr(0, len)+"...");
+}
 
 // Slack に通知する
 const sendSlack = async (filterdData, slackChannel) => {
@@ -160,22 +163,23 @@ const sendSlack = async (filterdData, slackChannel) => {
 
     // Slack に通知する（Block Kit Builder）
     // https://app.slack.com/block-kit-builder/TEKJRPVJP
+    const repliesText = item.replies !== null ? `　　*Reply to:* ${item.replies}` : null;
+    const reviewersText = item.reviewersObj !== null ? `\n　*Reviewers:* ${item.reviewersObj}` : null;
     const params =
       { blocks: [
         { type: 'context', elements: [
-          { type: 'mrkdwn', text: `:large_blue_diamond: *Bitbuket* ` },
+          { type: 'mrkdwn', text: `\n:large_blue_diamond:` },
           (item.authorObj !== null ? { type: 'image', image_url: item.authorObj.imageUrl, alt_text: '-' } : null),
           (item.authorObj !== null ? { type: 'mrkdwn', text: `${item.authorObj.mention}, ` } : null),
-          { type: 'mrkdwn', text: `*<${item.href}|${item.title}>*` }
+          { type: 'mrkdwn', text: `*<${item.href}|${truncate(item.title, 40)}>*` }
         ].filter(v => v) },
         { type: 'context', elements: [
+          { type: 'mrkdwn', text: '　' },
           { type: 'image', image_url: item.actionMsg.imageUrl, alt_text: '-' },
-          { type: 'mrkdwn', text: `${item.actionMsg.text}` }
+          { type: 'mrkdwn', text: [`${item.actionMsg.text}`, repliesText, reviewersText].join('') },
         ] },
-        (item.replies !== null ? { type: 'section', text: { type: 'mrkdwn', text: item.replies }} : null),
-        (item.reviewersObj !== null ? { type: 'section', text: { type: 'mrkdwn', text: `　　*Reviewers:* ${item.reviewersObj}` }} : null),
         { type: 'divider' },
-      ].filter(v => v) };
+      ] };
 
     // console.log(`slackChannel: ${slackChannel}`)
 
