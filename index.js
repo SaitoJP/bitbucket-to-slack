@@ -80,11 +80,13 @@ const getCommentUserName = async (commentUrl) => {
 // 取得しやすいデータ形式に整形する
 const parseData = async (data) => {
   let result = [];
+  let prevUpdatedPullReqId = null;
 
   for (const items of data.values) {
     const pullrequest = items['pull_request']
 
     const title = pullrequest.title;
+    const id = pullrequest.id;
     const pullRequestItem = await fetchPullRequestItem(pullrequest.links.self.href);
     let authorObj = null;
     let reviewersObj = null;
@@ -106,6 +108,15 @@ const parseData = async (data) => {
         // if (!values.changes.title && !values.changes.description) {
           reviewersObj = pullRequestItem.reviewersObj;
         // }
+
+        // 同一プルリク更新が連続した場合、１つ目以降を通知しない
+        if (prevUpdatedPullReqId === id) {
+          prevUpdatedPullReqId = id;
+          continue;
+        } else {
+          prevUpdatedPullReqId = id;
+        }
+
         break;
       case 'comment':
         date = values.updated_on;
