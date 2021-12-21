@@ -93,7 +93,7 @@ const parseData = async (data) => {
     let href = pullrequest.links.html.href;
     let date = '';
     let content = null;
-    let replies = null;
+    let replyDisplayName = null;
     const actionKey = Object.keys(items).filter(word => word != 'pull_request')[0]
     const values = items[actionKey]
     let actionMsg = { imageUrl: null, text: '-' };
@@ -133,7 +133,7 @@ const parseData = async (data) => {
         // 返信対象のコメント記入者にメンションを飛ばす
         if (values.parent) {
           const displayName = await getCommentUserName(values.parent.links.self.href);
-          replies = mentions[displayName];
+          replyDisplayName = displayName;
         }
 
         break;
@@ -147,7 +147,7 @@ const parseData = async (data) => {
         console.log(`Switch Error is ${actionKey}`);
     }
 
-    result.push({ date, title, href, actionMsg, content, replies, reviewersObj, authorObj });
+    result.push({ date, title, href, actionMsg, content, replyDisplayName, reviewersObj, authorObj });
   }
 
   return result;
@@ -174,8 +174,8 @@ const sendSlack = async (filterdData, slackChannel) => {
 
     // Slack に通知する（Block Kit Builder）
     // https://app.slack.com/block-kit-builder/TEKJRPVJP
-    const repliesText = item.replies !== null ? `　　*Reply to:* ${item.replies}` : null;
     const reviewersText = item.reviewersObj !== null ? `\n　*Reviewers:* ${item.reviewersObj}` : null;
+    const replyText = item.replyDisplayName !== null ? `　　*Reply to:* ${item.replyDisplayName}` : null;
     const params =
       { blocks: [
         { type: 'context', elements: [
@@ -187,7 +187,7 @@ const sendSlack = async (filterdData, slackChannel) => {
         { type: 'context', elements: [
           { type: 'mrkdwn', text: '　' },
           { type: 'image', image_url: item.actionMsg.imageUrl, alt_text: '-' },
-          { type: 'mrkdwn', text: [`${item.actionMsg.text}`, repliesText, reviewersText].join('') },
+          { type: 'mrkdwn', text: [`${item.actionMsg.text}`, replyText, reviewersText].join('') },
         ] },
         { type: 'divider' },
       ] };
@@ -205,8 +205,12 @@ const sendSlack = async (filterdData, slackChannel) => {
 
     // コメント内容はスレッドに表示
     if (item.content) {
+      const replyMentionText = item.replyDisplayName !== null ? `*Reply to:* ${mentions[item.replyDisplayName]}` : null;
       const commentParams =
-        { blocks: [ { type: 'section', text: { type: 'mrkdwn', text: item.content } } ] };
+        { blocks: [
+          { type: 'section', text: { type: 'mrkdwn', text: replyMentionText } },
+          { type: 'section', text: { type: 'mrkdwn', text: item.content } }
+        ] };
       await axios.post('https://slack.com/api/chat.postMessage', {
         channel: slackChannel,
         thread_ts: response.data.ts,
