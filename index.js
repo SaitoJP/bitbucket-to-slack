@@ -208,9 +208,9 @@ const sendSlack = async (filterdData, slackChannel) => {
       const replyMentionText = item.replyDisplayName !== null ? `*Reply to:* ${mentions[item.replyDisplayName]}` : null;
       const commentParams =
         { blocks: [
-          { type: 'section', text: { type: 'mrkdwn', text: replyMentionText } },
+          (replyMentionText !== null ?  { type: 'section', text: { type: 'mrkdwn', text: `${replyMentionText}` } } : null),
           { type: 'section', text: { type: 'mrkdwn', text: item.content } }
-        ] };
+        ].filter(v => v) };
       await axios.post('https://slack.com/api/chat.postMessage', {
         channel: slackChannel,
         thread_ts: response.data.ts,
